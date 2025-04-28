@@ -1,0 +1,39 @@
+# Ignore build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code settings
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Others
+*.vspscc
+*.vssscc
+
+# Ignore secrets/configs (if any)
+appsettings.Development.json
+
+# Ignore test results
+TestResults/
+
+# Ignore Rider IDE files
+.idea/
+*.sln.iml
+
+# Ignore local NuGet packages
+*.nupkg
+
+# Ignore publish output
+publish/
