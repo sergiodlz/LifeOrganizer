@@ -15,19 +15,25 @@ namespace LifeOrganizer.Data.Repositories
             _dbSet = context.Set<TEntity>();
         }
 
+
         public virtual async Task<TEntity?> GetByIdAsync(Guid id)
         {
-            return await _dbSet.FindAsync(id);
+            // Only return if not soft deleted
+            return await _dbSet.FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
         }
+
 
         public virtual async Task<IEnumerable<TEntity>> GetAllAsync()
         {
-            return await _dbSet.ToListAsync();
+            // Only return entities not soft deleted
+            return await _dbSet.Where(e => !e.IsDeleted).ToListAsync();
         }
+
 
         public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            // Only return entities not soft deleted
+            return await _dbSet.Where(e => !e.IsDeleted).Where(predicate).ToListAsync();
         }
 
         public virtual async Task AddAsync(TEntity entity)
@@ -49,7 +55,8 @@ namespace LifeOrganizer.Data.Repositories
 
         public virtual IQueryable<TEntity> Query()
         {
-            return _dbSet.AsQueryable();
+            // Only return entities not soft deleted
+            return _dbSet.Where(e => !e.IsDeleted).AsQueryable();
         }
     }
 }
