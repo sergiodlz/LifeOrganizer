@@ -1,11 +1,21 @@
 using Microsoft.EntityFrameworkCore;
+using LifeOrganizer.Data.UnitOfWorkPattern;
+using LifeOrganizer.Data.Repositories;
+using LifeOrganizer.Business.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
 // Configure PostgreSQL with EF Core
 builder.Services.AddDbContext<LifeOrganizer.Data.LifeOrganizerContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register UnitOfWork and generic Repository for DI
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+// Register GenericService for DI
+builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
