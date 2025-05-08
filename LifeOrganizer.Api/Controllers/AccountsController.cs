@@ -62,6 +62,7 @@ namespace LifeOrganizer.Api.Controllers
             var account = await _accountService.GetByIdAsync(id, cancellationToken);
             if (account == null)
                 return NotFound();
+            // Soft delete: mark as deleted
             await _accountService.RemoveAsync(account, cancellationToken);
             return NoContent();
         }

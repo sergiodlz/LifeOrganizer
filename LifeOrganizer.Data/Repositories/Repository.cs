@@ -42,7 +42,9 @@ namespace LifeOrganizer.Data.Repositories
 
         public virtual void Remove(TEntity entity)
         {
-            _dbSet.Remove(entity);
+            // Soft delete: mark as deleted and update
+            entity.IsDeleted = true;
+            _dbSet.Update(entity);
         }
 
         public virtual IQueryable<TEntity> Query()

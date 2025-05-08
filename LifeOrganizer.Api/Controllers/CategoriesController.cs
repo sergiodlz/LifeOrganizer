@@ -52,6 +52,7 @@ namespace LifeOrganizer.Api.Controllers
         {
             var entity = await _service.GetByIdAsync(id, cancellationToken);
             if (entity == null) return NotFound();
+            // Soft delete: mark as deleted
             await _service.RemoveAsync(entity, cancellationToken);
             return NoContent();
         }

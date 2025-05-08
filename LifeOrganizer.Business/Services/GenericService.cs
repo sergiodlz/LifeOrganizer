@@ -42,6 +42,7 @@ namespace LifeOrganizer.Business.Services
 
         public async Task RemoveAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
+            // Soft delete: mark as deleted and update
             _unitOfWork.Repository<TEntity>().Remove(entity);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
