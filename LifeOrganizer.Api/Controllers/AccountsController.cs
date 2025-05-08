@@ -6,16 +6,16 @@ namespace LifeOrganizer.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : ControllerBase
+    public class AccountsController : ControllerBase
     {
         private readonly IGenericService<Account> _accountService;
 
-        public AccountController(IGenericService<Account> accountService)
+        public AccountsController(IGenericService<Account> accountService)
         {
             _accountService = accountService;
         }
 
-        // GET: api/Account
+        // GET: api/Accounts
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Account>>> GetAll(CancellationToken cancellationToken)
         {
@@ -23,7 +23,7 @@ namespace LifeOrganizer.Api.Controllers
             return Ok(accounts);
         }
 
-        // GET: api/Account/{id}
+        // GET: api/Accounts/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Account>> GetById(Guid id, CancellationToken cancellationToken)
         {
@@ -33,7 +33,7 @@ namespace LifeOrganizer.Api.Controllers
             return Ok(account);
         }
 
-        // POST: api/Account
+        // POST: api/Accounts
         [HttpPost]
         public async Task<ActionResult<Account>> Create(Account account, CancellationToken cancellationToken)
         {
@@ -42,7 +42,7 @@ namespace LifeOrganizer.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = account.Id }, account);
         }
 
-        // PUT: api/Account/{id}
+        // PUT: api/Accounts/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, Account account, CancellationToken cancellationToken)
         {
@@ -55,7 +55,7 @@ namespace LifeOrganizer.Api.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Account/{id}
+        // DELETE: api/Accounts/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
