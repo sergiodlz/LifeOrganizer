@@ -16,17 +16,31 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // Register GenericService for DI
 builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
+// Add controllers
+builder.Services.AddControllers();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+
 var app = builder.Build();
 
+// Run database migrations at startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<LifeOrganizer.Data.LifeOrganizerContext>();
+    db.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Enable attribute-routed controllers
+app.MapControllers();
 
 var summaries = new[]
 {
