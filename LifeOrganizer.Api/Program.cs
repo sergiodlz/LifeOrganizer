@@ -1,69 +1,84 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using LifeOrganizer.Data.UnitOfWorkPattern;
 using LifeOrganizer.Data.Repositories;
 using LifeOrganizer.Business.Services;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-// Configure PostgreSQL with EF Core
-builder.Services.AddDbContext<LifeOrganizer.Data.LifeOrganizerContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Register UnitOfWork and generic Repository for DI
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-// Register GenericService for DI
-builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
-// Add controllers
-builder.Services.AddControllers();
-
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
+// Add services to the container
+ConfigureServices(builder.Services, builder.Configuration, builder.Logging);
 
 var app = builder.Build();
 
-// Run database migrations at startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<LifeOrganizer.Data.LifeOrganizerContext>();
-    db.Database.Migrate();
-}
-
-// Configure the HTTP request pipeline.
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-// Enable attribute-routed controllers
-app.MapControllers();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// Configure the HTTP request pipeline
+ConfigurePipeline(app);
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+static void ConfigureServices(IServiceCollection services, IConfiguration configuration, ILoggingBuilder logging)
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    // Configure logging
+    logging.ClearProviders();
+    logging.AddConsole();
+
+    // Configure PostgreSQL with EF Core
+    services.AddDbContext<LifeOrganizer.Data.LifeOrganizerContext>(options =>
+        options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+
+    // Register UnitOfWork and generic Repository for DI
+    services.AddScoped<IUnitOfWork, UnitOfWork>();
+    services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+    services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
+
+    // Add controllers
+    services.AddControllers();
+
+    // Add CORS
+    services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+    });
+
+    // Add health checks
+    services.AddHealthChecks();
+
+    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+    services.AddOpenApi();
+}
+
+static void ConfigurePipeline(WebApplication app)
+{
+    // Run database migrations at startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LifeOrganizer.Data.LifeOrganizerContext>();
+        db.Database.Migrate();
+    }
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseExceptionHandler("/error");
+        app.UseHsts();
+    }
+
+    // Enable CORS
+    app.UseCors("AllowAll");
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
+
+    // Enable attribute-routed controllers
+    app.MapControllers();
+
+    // Add health checks endpoint
+    app.MapHealthChecks("/health");
 }
