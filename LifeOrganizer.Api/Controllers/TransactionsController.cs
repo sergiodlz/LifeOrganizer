@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ namespace LifeOrganizer.Api.Controllers
 {
     [ApiController]
     [Route("api/transactions")]
+    [Authorize]
     public class TransactionsController : ControllerBase
     {
         private readonly IGenericService<Transaction> _service;

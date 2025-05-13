@@ -32,8 +32,34 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
     services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
     services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
 
+
     // Add controllers
     services.AddControllers();
+
+    // Add JWT authentication
+    var jwtSettings = configuration.GetSection("JwtSettings");
+    services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = "JwtBearer";
+        options.DefaultChallengeScheme = "JwtBearer";
+    })
+    .AddJwtBearer("JwtBearer", options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+    // Register AuthService (now in Business)
+    services.AddScoped<LifeOrganizer.Business.Services.IAuthService, LifeOrganizer.Business.Services.AuthService>();
 
     // Add CORS
     services.AddCors(options =>
@@ -70,6 +96,10 @@ static void ConfigurePipeline(WebApplication app)
 
     // Enable CORS
     app.UseCors("AllowAll");
+
+    // Enable authentication/authorization
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     if (app.Environment.IsDevelopment())
     {

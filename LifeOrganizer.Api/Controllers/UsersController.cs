@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
+using LifeOrganizer.Business.DTOs.Auth;
 using LifeOrganizer.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,13 +8,37 @@ namespace LifeOrganizer.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly IGenericService<User> _userService;
+        private readonly IAuthService _authService;
 
-        public UsersController(IGenericService<User> userService)
+        public UsersController(IGenericService<User> userService, IAuthService authService)
         {
             _userService = userService;
+            _authService = authService;
+        }
+        // POST: api/Users/login
+        [HttpPost("login")]
+        [AllowAnonymous]
+        public async Task<ActionResult> Login([FromBody] LoginDto loginDto)
+        {
+            var result = await _authService.LoginAsync(loginDto);
+            if (result == null)
+                return Unauthorized("Invalid credentials");
+            return Ok(result);
+        }
+
+        // POST: api/Users/register
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<ActionResult> Register([FromBody] RegisterDto registerDto)
+        {
+            var result = await _authService.RegisterAsync(registerDto);
+            if (result == null)
+                return BadRequest("Username or email already exists");
+            return Ok(result);
         }
 
         // GET: api/Users

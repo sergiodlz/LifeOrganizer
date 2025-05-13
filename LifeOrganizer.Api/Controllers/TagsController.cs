@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ namespace LifeOrganizer.Api.Controllers
 {
     [ApiController]
     [Route("api/tags")]
+    [Authorize]
     public class TagsController : ControllerBase
     {
         private readonly IGenericService<Tag> _service;

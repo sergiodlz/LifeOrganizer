@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
+using LifeOrganizer.Api.Extensions;
 
 namespace LifeOrganizer.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AccountsController : ControllerBase
     {
         private readonly IGenericService<Account> _accountService;
@@ -19,16 +22,20 @@ namespace LifeOrganizer.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Account>>> GetAll(CancellationToken cancellationToken)
         {
-            var accounts = await _accountService.GetAllAsync(cancellationToken);
-            return Ok(accounts);
+            var userId = User.GetUserId();
+            var accounts = await _accountService
+                .GetAllAsync(cancellationToken);
+            var filtered = accounts.Where(a => a.UserId == userId);
+            return Ok(filtered);
         }
 
         // GET: api/Accounts/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Account>> GetById(Guid id, CancellationToken cancellationToken)
         {
+            var userId = User.GetUserId();
             var account = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (account == null)
+            if (account == null || account.UserId != userId)
                 return NotFound();
             return Ok(account);
         }
@@ -37,6 +44,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Account>> Create(Account account, CancellationToken cancellationToken)
         {
+            var userId = User.GetUserId();
+            account.UserId = userId;
             await _accountService.AddAsync(account, cancellationToken);
             // Return 201 Created with location header
             return CreatedAtAction(nameof(GetById), new { id = account.Id }, account);
@@ -48,9 +57,11 @@ namespace LifeOrganizer.Api.Controllers
         {
             if (id != account.Id)
                 return BadRequest("ID in URL and body do not match.");
+            var userId = User.GetUserId();
             var existing = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (existing == null)
+            if (existing == null || existing.UserId != userId)
                 return NotFound();
+            account.UserId = userId;
             await _accountService.UpdateAsync(account, cancellationToken);
             return NoContent();
         }
@@ -59,8 +70,9 @@ namespace LifeOrganizer.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
+            var userId = User.GetUserId();
             var account = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (account == null)
+            if (account == null || account.UserId != userId)
                 return NotFound();
             // Soft delete: mark as deleted
             await _accountService.RemoveAsync(account, cancellationToken);
