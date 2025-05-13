@@ -24,6 +24,7 @@ namespace LifeOrganizer.Business.Services
 
         public async Task<AuthResponseDto?> LoginAsync(LoginDto loginDto)
         {
+            // Use Guid.Empty to bypass userId filter for authentication
             var user = await _unitOfWork.Repository<User>()
                 .Query()
                 .Where(u => !u.IsDeleted && (u.Username == loginDto.UsernameOrEmail || u.Email == loginDto.UsernameOrEmail))
@@ -44,6 +45,7 @@ namespace LifeOrganizer.Business.Services
         public async Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto)
         {
             var userRepo = _unitOfWork.Repository<User>();
+            // Use Guid.Empty to bypass userId filter for registration
             if (await userRepo.Query().AnyAsync(u => u.Username == registerDto.Username || u.Email == registerDto.Email))
                 return null;
 

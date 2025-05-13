@@ -13,19 +13,19 @@ namespace LifeOrganizer.Business.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<TEntity?> GetByIdAsync(Guid id, Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _unitOfWork.Repository<TEntity>().GetByIdAsync(id);
+            return await _unitOfWork.Repository<TEntity>().GetByIdAsync(id, userId);
         }
 
-        public async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<TEntity>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _unitOfWork.Repository<TEntity>().GetAllAsync();
+            return await _unitOfWork.Repository<TEntity>().GetAllAsync(userId);
         }
 
-        public async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _unitOfWork.Repository<TEntity>().FindAsync(predicate);
+            return await _unitOfWork.Repository<TEntity>().FindAsync(predicate, userId);
         }
 
         public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
@@ -45,11 +45,6 @@ namespace LifeOrganizer.Business.Services
             // Soft delete: mark as deleted and update
             _unitOfWork.Repository<TEntity>().Remove(entity);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-
-        public IQueryable<TEntity> Query()
-        {
-            return _unitOfWork.Repository<TEntity>().Query();
         }
     }
 }

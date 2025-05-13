@@ -5,9 +5,9 @@ namespace LifeOrganizer.Data.Repositories
 {
     public interface IRepository<TEntity> where TEntity : BaseEntity
     {
-        Task<TEntity?> GetByIdAsync(Guid id);
-        Task<IEnumerable<TEntity>> GetAllAsync();
-        Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate);
+        Task<TEntity?> GetByIdAsync(Guid id, Guid userId);
+        Task<IEnumerable<TEntity>> GetAllAsync(Guid userId);
+        Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId);
         Task AddAsync(TEntity entity);
         void Update(TEntity entity);
         void Remove(TEntity entity);

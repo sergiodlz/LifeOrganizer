@@ -16,24 +16,24 @@ namespace LifeOrganizer.Data.Repositories
         }
 
 
-        public virtual async Task<TEntity?> GetByIdAsync(Guid id)
+        public virtual async Task<TEntity?> GetByIdAsync(Guid id, Guid userId)
         {
-            // Only return if not soft deleted
-            return await _dbSet.FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
+            // Only return if not soft deleted and owned by user
+            return await _dbSet.FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted && e.UserId == userId);
         }
 
 
-        public virtual async Task<IEnumerable<TEntity>> GetAllAsync()
+        public virtual async Task<IEnumerable<TEntity>> GetAllAsync(Guid userId)
         {
-            // Only return entities not soft deleted
-            return await _dbSet.Where(e => !e.IsDeleted).ToListAsync();
+            // Only return entities not soft deleted and owned by user
+            return await _dbSet.Where(e => !e.IsDeleted && e.UserId == userId).ToListAsync();
         }
 
 
-        public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId)
         {
-            // Only return entities not soft deleted
-            return await _dbSet.Where(e => !e.IsDeleted).Where(predicate).ToListAsync();
+            // Only return entities not soft deleted and owned by user
+            return await _dbSet.Where(e => !e.IsDeleted && e.UserId == userId).Where(predicate).ToListAsync();
         }
 
         public virtual async Task AddAsync(TEntity entity)

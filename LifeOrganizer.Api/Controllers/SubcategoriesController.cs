@@ -1,3 +1,4 @@
+using LifeOrganizer.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Data.Entities;
@@ -20,14 +21,16 @@ namespace LifeOrganizer.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Subcategory>>> GetAll(CancellationToken cancellationToken)
         {
-            var items = await _service.GetAllAsync(cancellationToken);
+            var userId = User.GetUserId();
+            var items = await _service.GetAllAsync(userId, cancellationToken);
             return Ok(items);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Subcategory>> GetById(Guid id, CancellationToken cancellationToken)
         {
-            var item = await _service.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var item = await _service.GetByIdAsync(id, userId, cancellationToken);
             if (item == null) return NotFound();
             return Ok(item);
         }
@@ -35,6 +38,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<Subcategory>> Create(Subcategory entity, CancellationToken cancellationToken)
         {
+            var userId = User.GetUserId();
+            entity.UserId = userId;
             await _service.AddAsync(entity, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
         }
@@ -43,8 +48,10 @@ namespace LifeOrganizer.Api.Controllers
         public async Task<IActionResult> Update(Guid id, Subcategory entity, CancellationToken cancellationToken)
         {
             if (id != entity.Id) return BadRequest("ID in URL and body do not match.");
-            var existing = await _service.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var existing = await _service.GetByIdAsync(id, userId, cancellationToken);
             if (existing == null) return NotFound();
+            entity.UserId = userId;
             await _service.UpdateAsync(entity, cancellationToken);
             return NoContent();
         }
@@ -52,7 +59,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
-            var entity = await _service.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var entity = await _service.GetByIdAsync(id, userId, cancellationToken);
             if (entity == null) return NotFound();
             // Soft delete: mark as deleted
             await _service.RemoveAsync(entity, cancellationToken);

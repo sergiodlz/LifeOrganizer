@@ -23,10 +23,8 @@ namespace LifeOrganizer.Api.Controllers
         public async Task<ActionResult<IEnumerable<Account>>> GetAll(CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            var accounts = await _accountService
-                .GetAllAsync(cancellationToken);
-            var filtered = accounts.Where(a => a.UserId == userId);
-            return Ok(filtered);
+            var accounts = await _accountService.GetAllAsync(userId, cancellationToken);
+            return Ok(accounts);
         }
 
         // GET: api/Accounts/{id}
@@ -34,8 +32,8 @@ namespace LifeOrganizer.Api.Controllers
         public async Task<ActionResult<Account>> GetById(Guid id, CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            var account = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (account == null || account.UserId != userId)
+            var account = await _accountService.GetByIdAsync(id, userId, cancellationToken);
+            if (account == null)
                 return NotFound();
             return Ok(account);
         }
@@ -58,8 +56,8 @@ namespace LifeOrganizer.Api.Controllers
             if (id != account.Id)
                 return BadRequest("ID in URL and body do not match.");
             var userId = User.GetUserId();
-            var existing = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (existing == null || existing.UserId != userId)
+            var existing = await _accountService.GetByIdAsync(id, userId, cancellationToken);
+            if (existing == null)
                 return NotFound();
             account.UserId = userId;
             await _accountService.UpdateAsync(account, cancellationToken);
@@ -71,8 +69,8 @@ namespace LifeOrganizer.Api.Controllers
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            var account = await _accountService.GetByIdAsync(id, cancellationToken);
-            if (account == null || account.UserId != userId)
+            var account = await _accountService.GetByIdAsync(id, userId, cancellationToken);
+            if (account == null)
                 return NotFound();
             // Soft delete: mark as deleted
             await _accountService.RemoveAsync(account, cancellationToken);

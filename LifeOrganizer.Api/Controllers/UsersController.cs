@@ -1,3 +1,4 @@
+using LifeOrganizer.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Business.DTOs.Auth;
@@ -45,7 +46,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetAll(CancellationToken cancellationToken)
         {
-            var users = await _userService.GetAllAsync(cancellationToken);
+            var userId = User.GetUserId();
+            var users = await _userService.GetAllAsync(userId, cancellationToken);
             return Ok(users);
         }
 
@@ -53,7 +55,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetById(Guid id, CancellationToken cancellationToken)
         {
-            var user = await _userService.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var user = await _userService.GetByIdAsync(id, userId, cancellationToken);
             if (user == null)
                 return NotFound();
             return Ok(user);
@@ -63,6 +66,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> Create(User user, CancellationToken cancellationToken)
         {
+            var userId = User.GetUserId();
+            user.UserId = userId;
             await _userService.AddAsync(user, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
         }
@@ -73,9 +78,11 @@ namespace LifeOrganizer.Api.Controllers
         {
             if (id != user.Id)
                 return BadRequest("ID in URL and body do not match.");
-            var existing = await _userService.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var existing = await _userService.GetByIdAsync(id, userId, cancellationToken);
             if (existing == null)
                 return NotFound();
+            user.UserId = userId;
             await _userService.UpdateAsync(user, cancellationToken);
             return NoContent();
         }
@@ -84,7 +91,8 @@ namespace LifeOrganizer.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
-            var user = await _userService.GetByIdAsync(id, cancellationToken);
+            var userId = User.GetUserId();
+            var user = await _userService.GetByIdAsync(id, userId, cancellationToken);
             if (user == null)
                 return NotFound();
             await _userService.RemoveAsync(user, cancellationToken);
