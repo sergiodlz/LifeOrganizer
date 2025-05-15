@@ -1,4 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="11.3.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LifeOrganizer.Data\LifeOrganizer.Data.csproj" />

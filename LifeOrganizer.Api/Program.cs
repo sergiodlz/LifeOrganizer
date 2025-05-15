@@ -1,12 +1,25 @@
+
 using Microsoft.EntityFrameworkCore;
 using LifeOrganizer.Data.UnitOfWorkPattern;
 using LifeOrganizer.Data.Repositories;
 using LifeOrganizer.Business.Services;
 using LifeOrganizer.Business.MappingProfiles;
 using LifeOrganizer.Data;
+using FluentValidation.AspNetCore;
+using FluentValidation;
+using LifeOrganizer.Business.Validators;
+
 
 var builder = WebApplication.CreateBuilder(args);
-
+// FluentValidation registration
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<AccountDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<TransactionDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<TagDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<SubcategoryDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CategoryDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserDtoValidator>();
 // Configure logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
