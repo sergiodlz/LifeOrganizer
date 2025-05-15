@@ -1,15 +1,18 @@
 using System.Linq.Expressions;
+using LifeOrganizer.Business.DTOs;
 using LifeOrganizer.Data.Entities;
 
 namespace LifeOrganizer.Business.Services
 {
-    public interface IGenericService<TEntity> where TEntity : BaseEntity
+    public interface IGenericService<TEntity, TDto>
+        where TEntity : BaseEntity
+        where TDto : BaseEntityDto
     {
-        Task<TEntity?> GetByIdAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<TEntity>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId, CancellationToken cancellationToken = default);
-        Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);
-        Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
-        Task RemoveAsync(TEntity entity, CancellationToken cancellationToken = default);
+        Task<TDto?> GetByIdAsync(Guid id, Guid userId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<TDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<TDto>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId, CancellationToken cancellationToken = default);
+        Task AddAsync(TDto entity, CancellationToken cancellationToken = default);
+        Task UpdateAsync(TDto entity, CancellationToken cancellationToken = default);
+        Task RemoveAsync(TDto entity, CancellationToken cancellationToken = default);
     }
 }

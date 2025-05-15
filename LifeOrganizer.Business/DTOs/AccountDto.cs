@@ -2,9 +2,8 @@ using LifeOrganizer.Data.Entities;
 
 namespace LifeOrganizer.Business.DTOs;
 
-public class AccountDto
+public class AccountDto : BaseEntityDto
 {
-    public Guid Id { get; set; }
     public string Name { get; set; } = default!;
     public AccountType Type { get; set; }
     public bool IncludeInGlobalBalance { get; set; }
