@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using LifeOrganizer.Data.UnitOfWorkPattern;
 using LifeOrganizer.Data.Repositories;
@@ -8,6 +7,7 @@ using LifeOrganizer.Data;
 using FluentValidation.AspNetCore;
 using FluentValidation;
 using LifeOrganizer.Business.Validators;
+using LifeOrganizer.Api.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -85,6 +85,8 @@ builder.Services.AddAutoMapper(typeof(TagProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(TransactionProfile).Assembly);
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Run database migrations at startup
 using (var scope = app.Services.CreateScope())
