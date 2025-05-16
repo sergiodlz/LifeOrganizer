@@ -72,6 +72,22 @@ namespace LifeOrganizer.Business.Services
             await accountRepo.AddAsync(account);
             await _unitOfWork.SaveChangesAsync();
 
+            // Create default categories for the new user
+            var defaultCategories = new[] { "Alimentación", "Transporte", "Salud", "Educación", "Entretenimiento", "Vivienda", "Otros" };
+            var categoryRepo = _unitOfWork.Repository<Category>();
+            foreach (var categoryName in defaultCategories)
+            {
+                var category = new Category
+                {
+                    Name = categoryName,
+                    UserId = user.Id,
+                    IsDeleted = false,
+                    CreatedOn = DateTimeOffset.UtcNow
+                };
+                await categoryRepo.AddAsync(category);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
             return new AuthResponseDto
             {
                 Token = GenerateJwtToken(user),
