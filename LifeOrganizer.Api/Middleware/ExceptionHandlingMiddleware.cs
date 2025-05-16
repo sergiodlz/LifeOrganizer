@@ -1,4 +1,4 @@
-using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
 
@@ -24,14 +24,19 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred.");
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            context.Response.ContentType = "application/json";
-            var result = JsonSerializer.Serialize(new
+
+            var problemDetails = new ProblemDetails
             {
-                error = "An unexpected error occurred.",
-                details = ex.Message // Remove in production for security
-            });
-            await context.Response.WriteAsync(result);
+                Status = StatusCodes.Status500InternalServerError,
+                Title = "An unexpected error occurred.",
+                Detail = ex.Message, // Remove or hide in production
+                Instance = context.Request.Path
+            };
+
+            context.Response.StatusCode = problemDetails.Status.Value;
+            context.Response.ContentType = "application/problem+json";
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails, options));
         }
     }
 }
