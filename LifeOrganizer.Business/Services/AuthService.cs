@@ -44,7 +44,6 @@ namespace LifeOrganizer.Business.Services
         public async Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto)
         {
             var userRepo = _unitOfWork.Repository<User>();
-            // Use Guid.Empty to bypass userId filter for registration
             if (await userRepo.Query().AnyAsync(u => u.Username == registerDto.Username || u.Email == registerDto.Email))
                 return null;
 
@@ -56,6 +55,21 @@ namespace LifeOrganizer.Business.Services
                 IsDeleted = false
             };
             await userRepo.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create a default account for the new user
+            var accountRepo = _unitOfWork.Repository<Account>();
+            var account = new Account
+            {
+                Name = "Efectivo",
+                Type = AccountType.Cash,
+                Currency = CurrencyType.COP,
+                IncludeInGlobalBalance = true,
+                UserId = user.Id,
+                IsDeleted = false,
+                CreatedOn = DateTimeOffset.UtcNow
+            };
+            await accountRepo.AddAsync(account);
             await _unitOfWork.SaveChangesAsync();
 
             return new AuthResponseDto
