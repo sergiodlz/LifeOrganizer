@@ -58,5 +58,10 @@ namespace LifeOrganizer.Data.Repositories
             // Only return entities not soft deleted
             return _dbSet.Where(e => !e.IsDeleted).AsQueryable();
         }
+
+        public async Task AddRangeAsync(IEnumerable<TEntity> entities)
+        {
+            await _dbSet.AddRangeAsync(entities);
+        }
     }
 }

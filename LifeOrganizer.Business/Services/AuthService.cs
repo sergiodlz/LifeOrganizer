@@ -1,6 +1,7 @@
 using LifeOrganizer.Business.DTOs.Auth;
 using LifeOrganizer.Data.Entities;
 using LifeOrganizer.Data.UnitOfWorkPattern;
+using LifeOrganizer.Shared.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -55,37 +56,10 @@ namespace LifeOrganizer.Business.Services
                 IsDeleted = false
             };
             await userRepo.AddAsync(user);
-            await _unitOfWork.SaveChangesAsync();
 
-            // Create a default account for the new user
-            var accountRepo = _unitOfWork.Repository<Account>();
-            var account = new Account
-            {
-                Name = "Efectivo",
-                Type = AccountType.Cash,
-                Currency = CurrencyType.COP,
-                IncludeInGlobalBalance = true,
-                UserId = user.Id,
-                IsDeleted = false,
-                CreatedOn = DateTimeOffset.UtcNow
-            };
-            await accountRepo.AddAsync(account);
-            await _unitOfWork.SaveChangesAsync();
-
-            // Create default categories for the new user
-            var defaultCategories = new[] { "Alimentación", "Transporte", "Salud", "Educación", "Entretenimiento", "Vivienda", "Otros" };
-            var categoryRepo = _unitOfWork.Repository<Category>();
-            foreach (var categoryName in defaultCategories)
-            {
-                var category = new Category
-                {
-                    Name = categoryName,
-                    UserId = user.Id,
-                    IsDeleted = false,
-                    CreatedOn = DateTimeOffset.UtcNow
-                };
-                await categoryRepo.AddAsync(category);
-            }
+            await CreateDefaultAccountAsync(user.Id);
+            await CreateDefaultCategoriesAsync(user.Id);
+            
             await _unitOfWork.SaveChangesAsync();
 
             return new AuthResponseDto
@@ -116,6 +90,37 @@ namespace LifeOrganizer.Business.Services
                 signingCredentials: creds
             );
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private async Task CreateDefaultAccountAsync(Guid userId)
+        {
+            var account = new Account
+            {
+                Name = SharedResources.DefaultAccountName,
+                Type = AccountType.Cash,
+                Currency = CurrencyType.COP,
+                IncludeInGlobalBalance = true,
+                UserId = userId,
+                IsDeleted = false,
+                CreatedOn = DateTimeOffset.UtcNow
+            };
+            await _unitOfWork.Repository<Account>().AddAsync(account);
+        }
+
+        private async Task CreateDefaultCategoriesAsync(Guid userId)
+        {
+            var categoryRepo = _unitOfWork.Repository<Category>();
+            var categories = SharedResources.DefaultCategories
+                .Select(name => new Category
+                {
+                    Name = name,
+                    UserId = userId,
+                    IsDeleted = false,
+                    CreatedOn = DateTimeOffset.UtcNow
+                })
+                .ToList();
+
+            await categoryRepo.AddRangeAsync(categories);
         }
     }
 }

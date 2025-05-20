@@ -9,6 +9,7 @@ namespace LifeOrganizer.Data.Repositories
         Task<IEnumerable<TEntity>> GetAllAsync(Guid userId);
         Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Guid userId);
         Task AddAsync(TEntity entity);
+        Task AddRangeAsync(IEnumerable<TEntity> entities);
         void Update(TEntity entity);
         void Remove(TEntity entity);
         IQueryable<TEntity> Query();
