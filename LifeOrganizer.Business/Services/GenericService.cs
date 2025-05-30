@@ -43,15 +43,25 @@ namespace LifeOrganizer.Business.Services
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task UpdateAsync(TDto entity, CancellationToken cancellationToken = default)
+
+        public async Task UpdateAsync(TDto dto, CancellationToken cancellationToken = default)
         {
-            _unitOfWork.Repository<TEntity>().Update(_mapper.Map<TEntity>(entity));
+            var repo = _unitOfWork.Repository<TEntity>();
+            var trackedEntity = await repo.GetByIdAsync(dto.Id, dto.UserId);
+            if (trackedEntity == null)
+                throw new InvalidOperationException($"Entity of type {typeof(TEntity).Name} with Id {dto.Id} not found.");
+            _mapper.Map(dto, trackedEntity); // Map changes onto tracked entity
+            repo.Update(trackedEntity);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task RemoveAsync(TDto entity, CancellationToken cancellationToken = default)
+        public async Task RemoveAsync(TDto dto, CancellationToken cancellationToken = default)
         {
-            _unitOfWork.Repository<TEntity>().Remove(_mapper.Map<TEntity>(entity));
+            var repo = _unitOfWork.Repository<TEntity>();
+            var trackedEntity = await repo.GetByIdAsync(dto.Id, dto.UserId);
+            if (trackedEntity == null)
+                throw new InvalidOperationException($"Entity of type {typeof(TEntity).Name} with Id {dto.Id} not found.");
+            repo.Remove(trackedEntity);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }
