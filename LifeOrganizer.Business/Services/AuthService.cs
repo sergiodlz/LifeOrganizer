@@ -16,6 +16,34 @@ namespace LifeOrganizer.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
 
+        // Removed duplicate constructor
+
+        public async Task<AuthResponseDto?> ChangePasswordAsync(Guid userId, ChangePasswordDto changePasswordDto)
+        {
+            var user = await _unitOfWork.Repository<User>()
+                .Query()
+                .Where(u => u.Id == userId && !u.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return null;
+
+            if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash))
+                return null;
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+            _unitOfWork.Repository<User>().Update(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                Token = GenerateJwtToken(user),
+                Username = user.Username,
+                Email = user.Email,
+                UserId = user.Id
+            };
+        }
+
         public AuthService(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;

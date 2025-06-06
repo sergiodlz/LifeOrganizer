@@ -14,6 +14,20 @@ namespace LifeOrganizer.Api.Controllers
     {
         private readonly IAuthService _authService;
 
+        // POST: api/Users/change-password
+        [HttpPost("change-password")]
+        public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.GetUserId();
+            var response = await _authService.ChangePasswordAsync(userId, changePasswordDto);
+            if (response == null)
+                return BadRequest("Current password is incorrect or user not found.");
+            return Ok(response);
+        }
+
         public UsersController(IAuthService authService)
         {
             _authService = authService;
