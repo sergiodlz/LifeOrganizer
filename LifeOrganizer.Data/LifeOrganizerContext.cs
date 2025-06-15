@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using LifeOrganizer.Data.Entities;
 
 namespace LifeOrganizer.Data;
-
 public class LifeOrganizerContext : DbContext
 {
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public LifeOrganizerContext(DbContextOptions<LifeOrganizerContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

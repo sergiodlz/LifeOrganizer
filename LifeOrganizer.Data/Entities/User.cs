@@ -2,6 +2,7 @@ namespace LifeOrganizer.Data.Entities;
 
 public class User : BaseEntity
 {
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public required string Username { get; set; }
     public required string Email { get; set; }
     public string? FullName { get; set; }

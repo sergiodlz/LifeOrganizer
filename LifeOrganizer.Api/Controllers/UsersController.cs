@@ -14,6 +14,22 @@ namespace LifeOrganizer.Api.Controllers
     {
         private readonly IAuthService _authService;
 
+        public UsersController(IAuthService authService)
+        {
+            _authService = authService;
+        }
+        
+        // POST: api/Users/refresh-token
+        [HttpPost("refresh-token")]
+        [AllowAnonymous]
+        public async Task<ActionResult> RefreshToken([FromBody] RefreshTokenRequestDto refreshTokenRequestDto)
+        {
+            var response = await _authService.RefreshTokenAsync(refreshTokenRequestDto);
+            if (response == null)
+                return Unauthorized("Invalid or expired refresh token.");
+            return Ok(response);
+        }
+
         // POST: api/Users/change-password
         [HttpPost("change-password")]
         public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
@@ -26,11 +42,6 @@ namespace LifeOrganizer.Api.Controllers
             if (response == null)
                 return BadRequest("Current password is incorrect or user not found.");
             return Ok(response);
-        }
-
-        public UsersController(IAuthService authService)
-        {
-            _authService = authService;
         }
 
         // POST: api/Users/login

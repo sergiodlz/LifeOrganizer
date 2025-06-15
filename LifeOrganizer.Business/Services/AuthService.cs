@@ -13,10 +13,77 @@ namespace LifeOrganizer.Business.Services
 {
     public class AuthService : IAuthService
     {
+        private async Task<RefreshToken> GenerateAndStoreRefreshTokenAsync(User user)
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = GenerateRefreshToken(),
+                Expires = DateTime.UtcNow.AddDays(7),
+                UserId = user.Id,
+                IsRevoked = false,
+                IsUsed = false,
+                CreatedOn = DateTimeOffset.UtcNow,
+                IsDeleted = false
+            };
+            await _unitOfWork.Repository<RefreshToken>().AddAsync(refreshToken);
+            await _unitOfWork.SaveChangesAsync();
+            return refreshToken;
+        }
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
 
-        // Removed duplicate constructor
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
+        public async Task<RefreshTokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto refreshTokenRequestDto)
+        {
+            var refreshTokenRepo = _unitOfWork.Repository<RefreshToken>();
+            var token = refreshTokenRequestDto.RefreshToken;
+            var refreshToken = await refreshTokenRepo.Query()
+                .Where(rt => rt.Token == token && !rt.IsRevoked && !rt.IsUsed && rt.Expires > DateTime.UtcNow)
+                .Include(rt => rt.User)
+                .FirstOrDefaultAsync();
+
+            if (refreshToken == null)
+                return null;
+
+            refreshToken.IsUsed = true;
+            refreshToken.IsRevoked = true;
+            refreshTokenRepo.Update(refreshToken);
+
+            var user = refreshToken.User;
+            if (user == null)
+                return null;
+
+            // Generate new tokens
+            var newJwt = GenerateJwtToken(user);
+            var newRefreshToken = new RefreshToken
+            {
+                Token = GenerateRefreshToken(),
+                Expires = DateTime.UtcNow.AddDays(7),
+                UserId = user.Id,
+                IsRevoked = false,
+                IsUsed = false,
+                CreatedOn = DateTimeOffset.UtcNow,
+                IsDeleted = false
+            };
+            await refreshTokenRepo.AddAsync(newRefreshToken);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new RefreshTokenResponseDto
+            {
+                Token = newJwt,
+                RefreshToken = newRefreshToken.Token,
+                Username = user.Username,
+                Email = user.Email,
+                UserId = user.Id
+            };
+        }
 
         public async Task<AuthResponseDto?> ChangePasswordAsync(Guid userId, ChangePasswordDto changePasswordDto)
         {
@@ -61,9 +128,11 @@ namespace LifeOrganizer.Business.Services
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
                 return null;
 
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user);
             return new AuthResponseDto
             {
                 Token = GenerateJwtToken(user),
+                RefreshToken = refreshToken.Token,
                 Username = user.Username,
                 Email = user.Email,
                 UserId = user.Id
@@ -90,9 +159,11 @@ namespace LifeOrganizer.Business.Services
             
             await _unitOfWork.SaveChangesAsync();
 
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user);
             return new AuthResponseDto
             {
                 Token = GenerateJwtToken(user),
+                RefreshToken = refreshToken.Token,
                 Username = user.Username,
                 Email = user.Email,
                 UserId = user.Id
@@ -114,7 +185,7 @@ namespace LifeOrganizer.Business.Services
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(12),
+                expires: DateTime.UtcNow.AddMinutes(5), // Changed to 5 minutes
                 signingCredentials: creds
             );
             return new JwtSecurityTokenHandler().WriteToken(token);
