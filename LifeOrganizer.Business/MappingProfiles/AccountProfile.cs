@@ -8,7 +8,10 @@ namespace LifeOrganizer.Business.MappingProfiles
     {
         public AccountProfile()
         {
-            CreateMap<Account, AccountDto>().ReverseMap();
+            CreateMap<Account, AccountDto>()
+                .ForMember(dest => dest.Pockets, opt => opt.MapFrom(src => src.Pockets));
+            CreateMap<AccountDto, Account>()
+                .ForMember(dest => dest.Pockets, opt => opt.Ignore()); // Avoid circular mapping
         }
     }
 }

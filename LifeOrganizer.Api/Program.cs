@@ -20,6 +20,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<SubcategoryDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CategoryDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<PocketDtoValidator>();
 // Configure logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -83,6 +84,7 @@ builder.Services.AddAutoMapper(typeof(CategoryProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(SubcategoryProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(TagProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(TransactionProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(PocketProfile).Assembly);
 
 var app = builder.Build();
 

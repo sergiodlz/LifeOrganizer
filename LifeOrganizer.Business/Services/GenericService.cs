@@ -64,5 +64,11 @@ namespace LifeOrganizer.Business.Services
             repo.Remove(trackedEntity);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task<IEnumerable<TDto>> GetAllWithIncludesAsync(Guid userId, CancellationToken cancellationToken = default, params Expression<Func<TEntity, object>>[] includes)
+        {
+            IEnumerable<TEntity> dbEntities = await _unitOfWork.Repository<TEntity>().GetAllWithIncludesAsync(userId, includes);
+            return _mapper.Map<IEnumerable<TDto>>(dbEntities);
+        }
     }
 }

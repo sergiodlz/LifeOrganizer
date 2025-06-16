@@ -20,7 +20,7 @@ namespace LifeOrganizer.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TDto>>> GetAll(CancellationToken cancellationToken)
+        public virtual async Task<ActionResult<IEnumerable<TDto>>> GetAll(CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
             var entities = await _genericService.GetAllAsync(userId, cancellationToken);
@@ -28,7 +28,7 @@ namespace LifeOrganizer.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<TDto>> GetById(Guid id, CancellationToken cancellationToken)
+        public virtual async Task<ActionResult<TDto>> GetById(Guid id, CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
             var entity = await _genericService.GetByIdAsync(id, userId, cancellationToken);
@@ -39,7 +39,7 @@ namespace LifeOrganizer.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<TDto>> Create(TDto dto, CancellationToken cancellationToken)
+        public virtual async Task<ActionResult<TDto>> Create(TDto dto, CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
             dto.UserId = userId;
@@ -48,7 +48,7 @@ namespace LifeOrganizer.Api.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, TDto dto, CancellationToken cancellationToken)
+        public virtual async Task<IActionResult> Update(Guid id, TDto dto, CancellationToken cancellationToken)
         {
             if (id != dto.Id)
                 return BadRequest("ID in URL and body do not match.");
@@ -62,7 +62,7 @@ namespace LifeOrganizer.Api.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+        public virtual async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
             var dto = await _genericService.GetByIdAsync(id, userId, cancellationToken);
