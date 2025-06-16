@@ -46,5 +46,15 @@ namespace LifeOrganizer.Api.Controllers
             var accounts = await _genericService.GetAllWithIncludesAsync(userId, cancellationToken, a => a.Pockets);
             return Ok(accounts);
         }
+
+        [HttpGet("{id}")]
+        public override async Task<ActionResult<AccountDto>> GetById(Guid id, CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            var account = await _genericService.GetByIdWithIncludesAsync(id, userId, cancellationToken, a => a.Pockets);
+            if (account == null)
+                return NotFound();
+            return Ok(account);
+        }
     }
 }

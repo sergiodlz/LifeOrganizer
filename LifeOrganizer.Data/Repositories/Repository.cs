@@ -76,5 +76,19 @@ namespace LifeOrganizer.Data.Repositories
             }
             return await query.ToListAsync();
         }
+
+        public async Task<TEntity?> GetByIdWithIncludesAsync(Guid id, Guid userId, params Expression<Func<TEntity, object>>[] includes)
+        {
+            IQueryable<TEntity> query = _dbSet.Where(e => e.Id == id && !e.IsDeleted && e.UserId == userId);
+            if (includes != null)
+            {
+                foreach (var include in includes)
+                {
+                    query = query.Include(include);
+                }
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
     }
 }

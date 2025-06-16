@@ -70,5 +70,11 @@ namespace LifeOrganizer.Business.Services
             IEnumerable<TEntity> dbEntities = await _unitOfWork.Repository<TEntity>().GetAllWithIncludesAsync(userId, includes);
             return _mapper.Map<IEnumerable<TDto>>(dbEntities);
         }
+
+        public async Task<TDto?> GetByIdWithIncludesAsync(Guid id, Guid userId, CancellationToken cancellationToken = default, params Expression<Func<TEntity, object>>[] includes)
+        {
+            TEntity? dbEntity = await _unitOfWork.Repository<TEntity>().GetByIdWithIncludesAsync(id, userId, includes);
+            return dbEntity == null ? null : _mapper.Map<TDto>(dbEntity);
+        }
     }
 }
