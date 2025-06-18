@@ -1,6 +1,5 @@
 using AutoMapper;
 using LifeOrganizer.Data.Entities;
-using LifeOrganizer.Business.DTOs;
 
 namespace LifeOrganizer.Business.MappingProfiles
 {
@@ -8,7 +7,11 @@ namespace LifeOrganizer.Business.MappingProfiles
     {
         public CategoryProfile()
         {
-            CreateMap<Category, CategoryDto>().ReverseMap();
+            CreateMap<Category, CategoryDto>()
+                .ForMember(dest => dest.Subcategories, opt => opt.MapFrom(src => src.Subcategories));
+                
+            CreateMap<CategoryDto, Category>()
+                .ForMember(dest => dest.Subcategories, opt => opt.Ignore()); // Avoid circular mapping
         }
     }
 }
