@@ -9,20 +9,29 @@ namespace LifeOrganizer.Api.Controllers
     [Authorize]
     public class CategoriesController : BaseController<Category, CategoryDto>
     {
-        private readonly IGenericService<Category, CategoryDto> _genericService;
+        private readonly ICategoryService _categoryService;
 
-        public CategoriesController(IGenericService<Category, CategoryDto> genericService)
-            : base(genericService)
+        public CategoriesController(ICategoryService categoryService)
+            : base(categoryService)
         {
-            _genericService = genericService;
+            _categoryService = categoryService;
         }
 
         [HttpGet]
         public override async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll(CancellationToken cancellationToken)
         {
             var userId = User.GetUserId();
-            var categories = await _genericService.GetAllWithIncludesAsync(userId, cancellationToken, c => c.Subcategories);
+            var categories = await _categoryService.GetAllWithIncludesAsync(userId, cancellationToken, c => c.Subcategories);
             return Ok(categories);
+        }
+
+        [HttpPost]
+        public override async Task<ActionResult<CategoryDto>> Create(CategoryDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            dto.UserId = userId;
+            await _categoryService.AddWithDefaultSubcategoryAsync(dto, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
     }
 }

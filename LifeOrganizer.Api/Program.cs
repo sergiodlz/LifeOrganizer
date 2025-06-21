@@ -33,6 +33,7 @@ builder.Services.AddDbContext<LifeOrganizer.Data.LifeOrganizerContext>(options =
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>));
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 // Add controllers
 builder.Services.AddControllers();
