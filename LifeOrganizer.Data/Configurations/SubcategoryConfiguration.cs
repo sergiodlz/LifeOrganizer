@@ -8,6 +8,8 @@ public class SubcategoryConfiguration : IEntityTypeConfiguration<Subcategory>
 {
     public void Configure(EntityTypeBuilder<Subcategory> builder)
     {
-        builder.HasIndex(s => new { s.UserId, s.Name, s.CategoryId }).IsUnique();
+        builder.HasIndex(s => new { s.UserId, s.Name, s.CategoryId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
     }
 }
