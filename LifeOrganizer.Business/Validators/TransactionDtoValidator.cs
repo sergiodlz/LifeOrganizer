@@ -7,10 +7,11 @@ namespace LifeOrganizer.Business.Validators
         public TransactionDtoValidator()
         {
             RuleFor(x => x.Amount).GreaterThan(0);
-            RuleFor(x => x.Date).NotEmpty();
-            RuleFor(x => x.Description).NotEmpty().MaximumLength(255);
+            RuleFor(x => x.OccurredOn).NotEmpty();
+            RuleFor(x => x.SubcategoryId).NotEmpty();
             RuleFor(x => x.AccountId).NotEmpty();
             RuleFor(x => x.Type).IsInEnum();
+            RuleFor(x => x.Currency).IsInEnum();
         }
     }
 }

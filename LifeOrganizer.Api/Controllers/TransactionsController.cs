@@ -10,8 +10,8 @@ namespace LifeOrganizer.Api.Controllers
     [Authorize]
     public class TransactionsController : BaseController<Transaction, TransactionDto>
     {
-        public TransactionsController(IGenericService<Transaction, TransactionDto> genericService)
-            : base(genericService)
+        public TransactionsController(ITransactionService transactionService)
+            : base(transactionService)
         {
         }
     }

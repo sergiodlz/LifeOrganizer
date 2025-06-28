@@ -37,7 +37,7 @@ namespace LifeOrganizer.Business.Services
             return _mapper.Map<IEnumerable<TDto>>(dbEntities);
         }
 
-        public async Task AddAsync(TDto entity, CancellationToken cancellationToken = default)
+        public virtual async Task AddAsync(TDto entity, CancellationToken cancellationToken = default)
         {
             await _unitOfWork.Repository<TEntity>().AddAsync(_mapper.Map<TEntity>(entity));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
