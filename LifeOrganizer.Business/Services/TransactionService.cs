@@ -29,7 +29,7 @@ namespace LifeOrganizer.Business.Services
                 {
                     if (tag.Id != Guid.Empty)
                     {
-                        var existingTag = await tagRepo.GetByIdAsync(tag.Id, tag.UserId);
+                        var existingTag = await tagRepo.GetByIdAsync(tag.Id, transaction.UserId);
                         if (existingTag != null)
                         {
                             attachedTags.Add(existingTag);
