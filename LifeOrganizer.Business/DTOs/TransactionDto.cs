@@ -6,6 +6,7 @@ public class TransactionDto : BaseEntityDto
     public decimal Amount { get; set; }
     public DateTimeOffset OccurredOn { get; set; }
     public Guid AccountId { get; set; }
+    public Guid? CategoryId { get; set; }
     public Guid? SubcategoryId { get; set; }
     public TransactionType Type { get; set; }
     public CurrencyType Currency { get; set; }

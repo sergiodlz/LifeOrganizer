@@ -23,7 +23,10 @@ namespace LifeOrganizer.Api.Controllers
         {
             var userId = User.GetUserId();
             var transactions = await _transactionService.GetAllWithIncludesAsync(userId, cancellationToken, t => t.Tags, t => t.Category, t => t.Subcategory, t => t.Account);
-            return Ok(transactions);
+            var ordered = transactions
+                .OrderByDescending(t => t.OccurredOn);
+
+            return Ok(ordered);
         }
     }
 }
