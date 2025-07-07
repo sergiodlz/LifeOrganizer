@@ -28,5 +28,13 @@ namespace LifeOrganizer.Api.Controllers
 
             return Ok(ordered);
         }
+
+        [HttpPost("transfer")]
+        public async Task<ActionResult> Transfer([FromBody] TransferDto transferDto, CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            await _transactionService.TransferAsync(transferDto, userId, cancellationToken);
+            return Ok();
+        }
     }
 }
