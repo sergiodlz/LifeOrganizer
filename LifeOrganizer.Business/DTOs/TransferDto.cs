@@ -6,11 +6,9 @@ namespace LifeOrganizer.Business.DTOs
         public DateTime OccurredOn { get; set; }
         public Guid AccountId { get; set; }
         public Guid ToAccountId { get; set; }
-        public Guid SubcategoryId { get; set; }
-        public int Type { get; set; }
-        public int Currency { get; set; }
+        public Guid? SubcategoryId { get; set; }
         public decimal? AmountTo { get; set; }
-        public List<Guid> Tags { get; set; } = new();
-        public Guid CategoryId { get; set; }
+        public List<TagDto> Tags { get; set; } = new();
+        public Guid? CategoryId { get; set; }
     }
 }

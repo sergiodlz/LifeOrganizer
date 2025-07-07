@@ -10,6 +10,7 @@ public class TransactionDto : BaseEntityDto
     public Guid? SubcategoryId { get; set; }
     public TransactionType Type { get; set; }
     public CurrencyType Currency { get; set; }
+    public string? Description { get; set; }
     public AccountDto? Account { get; set; }
     public CategoryDto? Category { get; set; }
     public SubcategoryDto? Subcategory { get; set; }

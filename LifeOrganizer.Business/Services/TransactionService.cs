@@ -68,7 +68,7 @@ namespace LifeOrganizer.Business.Services
                 toAccountAmount = transferDto.AmountTo.Value;
             }
 
-            Transaction fromTransaction = new()
+            TransactionDto fromTransaction = new()
             {
                 Amount = transferDto.Amount,
                 Type = TransactionType.Expense,
@@ -76,12 +76,13 @@ namespace LifeOrganizer.Business.Services
                 CategoryId = transferDto.CategoryId,
                 SubcategoryId = transferDto.SubcategoryId,
                 Description = $"Transfer to {toAccount.Name}",
-                OccurredOn = DateTime.UtcNow,
+                OccurredOn = transferDto.OccurredOn,
                 Currency = fromAccount.Currency,
-                UserId = userId
+                UserId = userId,
+                Tags = transferDto.Tags
             };
 
-            Transaction toTransaction = new()
+            TransactionDto toTransaction = new()
             {
                 Amount = toAccountAmount,
                 Type = TransactionType.Income,
@@ -89,14 +90,14 @@ namespace LifeOrganizer.Business.Services
                 CategoryId = transferDto.CategoryId,
                 SubcategoryId = transferDto.SubcategoryId,
                 Description = $"Transfer from {fromAccount.Name}",
-                OccurredOn = DateTime.UtcNow,
+                OccurredOn = transferDto.OccurredOn,
                 Currency = toAccount.Currency,
-                UserId = userId
+                UserId = userId,
+                Tags = transferDto.Tags
             };
 
-            await _unitOfWork.Repository<Transaction>().AddAsync(fromTransaction);
-            await _unitOfWork.Repository<Transaction>().AddAsync(toTransaction);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await AddAsync(fromTransaction, cancellationToken);
+            await AddAsync(toTransaction, cancellationToken);
         }
     }
 }
