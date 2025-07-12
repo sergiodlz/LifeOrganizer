@@ -8,5 +8,6 @@ public class AccountDto : BaseEntityDto
     public AccountType Type { get; set; }
     public bool IncludeInGlobalBalance { get; set; }
     public CurrencyType Currency { get; set; }
+    public decimal Balance { get; set; }
     public ICollection<PocketDto> Pockets { get; set; } = new List<PocketDto>();
 }

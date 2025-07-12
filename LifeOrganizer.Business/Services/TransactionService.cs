@@ -2,6 +2,7 @@ using AutoMapper;
 using LifeOrganizer.Business.DTOs;
 using LifeOrganizer.Data.Entities;
 using LifeOrganizer.Data.UnitOfWorkPattern;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LifeOrganizer.Business.Services
 {
@@ -19,33 +20,51 @@ namespace LifeOrganizer.Business.Services
 
         public override async Task AddAsync(TransactionDto dto, CancellationToken cancellationToken = default)
         {
-            var transaction = _mapper.Map<Transaction>(dto);
-
-            // Attach existing tags by Id
-            if (transaction.Tags != null && transaction.Tags.Count > 0)
+            IDbContextTransaction? dbTransaction = null;
+            try
             {
-                var tagRepo = _unitOfWork.Repository<Tag>();
-                var attachedTags = new List<Tag>();
-                foreach (var tag in transaction.Tags)
+                var accountRepo = _unitOfWork.Repository<Account>();
+                var transactionRepo = _unitOfWork.Repository<Transaction>();
+                dbTransaction = await _unitOfWork.BeginTransactionAsync();
+                var entity = _mapper.Map<Transaction>(dto);
+                var account = await accountRepo.GetByIdAsync(dto.AccountId, dto.UserId)
+                    ?? throw new InvalidOperationException($"Account with ID {dto.AccountId} not found.");
+
+                account.Balance += dto.Type == TransactionType.Income ? dto.Amount : -dto.Amount;
+                accountRepo.Update(account);
+
+                if (entity.Tags != null && entity.Tags.Count > 0)
                 {
-                    if (tag.Id != Guid.Empty)
+                    var tagRepo = _unitOfWork.Repository<Tag>();
+                    var attachedTags = new List<Tag>();
+                    foreach (var tag in entity.Tags)
                     {
-                        var existingTag = await tagRepo.GetByIdAsync(tag.Id, transaction.UserId);
-                        if (existingTag != null)
+                        if (tag.Id != Guid.Empty)
                         {
-                            attachedTags.Add(existingTag);
+                            var existingTag = await tagRepo.GetByIdAsync(tag.Id, entity.UserId);
+                            if (existingTag != null)
+                            {
+                                attachedTags.Add(existingTag);
+                            }
+                        }
+                        else
+                        {
+                            attachedTags.Add(tag);
                         }
                     }
-                    else
-                    {
-                        attachedTags.Add(tag);
-                    }
+                    entity.Tags = attachedTags;
                 }
-                transaction.Tags = attachedTags;
-            }
 
-            await _unitOfWork.Repository<Transaction>().AddAsync(transaction);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await transactionRepo.AddAsync(entity);
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                if (dbTransaction != null)
+                    await dbTransaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task TransferAsync(TransferDto transferDto, Guid userId, CancellationToken cancellationToken = default)
@@ -102,49 +121,91 @@ namespace LifeOrganizer.Business.Services
 
         public override async Task UpdateAsync(TransactionDto dto, CancellationToken cancellationToken = default)
         {
-            var transactionRepo = _unitOfWork.Repository<Transaction>();
-            var tagRepo = _unitOfWork.Repository<Tag>();
-
-            // Get the transaction with tags included
-            var existingTransaction = await transactionRepo.GetByIdWithIncludesAsync(
-                dto.Id, 
-                dto.UserId,
-                t => t.Tags);
-
-            if (existingTransaction == null)
+            IDbContextTransaction? dbTransaction = null;
+            try
             {
-                throw new ArgumentException($"Transaction with ID {dto.Id} not found");
-            }
+                dbTransaction = await _unitOfWork.BeginTransactionAsync();
+                var accountRepo = _unitOfWork.Repository<Account>();
+                var transactionRepo = _unitOfWork.Repository<Transaction>();
+                var tagRepo = _unitOfWork.Repository<Tag>();
 
-            // Update basic properties
-            _mapper.Map(dto, existingTransaction);
+                var existingTransaction = await transactionRepo.GetByIdWithIncludesAsync(
+                    dto.Id,
+                    dto.UserId,
+                    t => t.Tags) ?? throw new ArgumentException($"Transaction with ID {dto.Id} not found");
 
-            // Handle tags
-            // Start with a clean slate
-            existingTransaction.Tags = new List<Tag>();
+                var oldAccount = await accountRepo.GetByIdAsync(existingTransaction.AccountId, dto.UserId)
+                    ?? throw new InvalidOperationException($"Account with ID {existingTransaction.AccountId} not found.");
+                var account = await accountRepo.GetByIdAsync(dto.AccountId, dto.UserId)
+                    ?? throw new InvalidOperationException($"Account with ID {dto.AccountId} not found.");
+                oldAccount.Balance -= existingTransaction.Type == TransactionType.Income ? existingTransaction.Amount : -existingTransaction.Amount;
+                account.Balance += dto.Type == TransactionType.Income ? dto.Amount : -dto.Amount;
 
-            if (dto.Tags != null && dto.Tags.Any())
-            {
-                foreach (var tagDto in dto.Tags)
+                _mapper.Map(dto, existingTransaction);
+                existingTransaction.Tags = [];
+                if (dto.Tags != null && dto.Tags.Count != 0)
                 {
-                    if (tagDto.Id != Guid.Empty)
+                    foreach (var tagDto in dto.Tags)
                     {
-                        var existingTag = await tagRepo.GetByIdAsync(tagDto.Id, existingTransaction.UserId);
-                        if (existingTag != null)
+                        if (tagDto.Id != Guid.Empty)
                         {
-                            existingTransaction.Tags.Add(existingTag);
+                            var existingTag = await tagRepo.GetByIdAsync(tagDto.Id, existingTransaction.UserId);
+                            if (existingTag != null)
+                            {
+                                existingTransaction.Tags.Add(existingTag);
+                            }
+                        }
+                        else
+                        {
+                            var newTag = _mapper.Map<Tag>(tagDto);
+                            existingTransaction.Tags.Add(newTag);
                         }
                     }
-                    else
-                    {
-                        var newTag = _mapper.Map<Tag>(tagDto);
-                        existingTransaction.Tags.Add(newTag);
-                    }
                 }
-            }
 
-            transactionRepo.Update(existingTransaction);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                accountRepo.Update(oldAccount);
+                accountRepo.Update(account);
+                transactionRepo.Update(existingTransaction);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                if (dbTransaction != null)
+                    await dbTransaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public override async Task RemoveAsync(TransactionDto dto, CancellationToken cancellationToken = default)
+        {
+            IDbContextTransaction? dbTransaction = null;
+            try
+            {
+                dbTransaction = await _unitOfWork.BeginTransactionAsync();                
+                var accountRepo = _unitOfWork.Repository<Account>();
+                var transactionRepo = _unitOfWork.Repository<Transaction>();
+                var existingTransaction = await transactionRepo.GetByIdWithIncludesAsync(
+                    dto.Id,
+                    dto.UserId,
+                    t => t.Tags) ?? throw new ArgumentException($"Transaction with ID {dto.Id} not found");
+
+                var account = await accountRepo.GetByIdAsync(existingTransaction.AccountId, dto.UserId)
+                    ?? throw new InvalidOperationException($"Account with ID {existingTransaction.AccountId} not found.");
+
+                account.Balance -= existingTransaction.Type == TransactionType.Income ? existingTransaction.Amount : -existingTransaction.Amount;
+
+                accountRepo.Update(account);
+                transactionRepo.Remove(existingTransaction);
+                await _unitOfWork.SaveChangesAsync();                
+                await dbTransaction.CommitAsync();
+            }
+            catch
+            {
+                if (dbTransaction != null)
+                    await dbTransaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

@@ -55,7 +55,7 @@ namespace LifeOrganizer.Business.Services
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task RemoveAsync(TDto dto, CancellationToken cancellationToken = default)
+        public virtual async Task RemoveAsync(TDto dto, CancellationToken cancellationToken = default)
         {
             var repo = _unitOfWork.Repository<TEntity>();
             var trackedEntity = await repo.GetByIdAsync(dto.Id, dto.UserId);

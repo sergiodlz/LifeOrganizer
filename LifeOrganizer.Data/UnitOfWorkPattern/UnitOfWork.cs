@@ -1,6 +1,7 @@
 using System.Collections;
 using LifeOrganizer.Data.Entities;
 using LifeOrganizer.Data.Repositories;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LifeOrganizer.Data.UnitOfWorkPattern
 {
@@ -29,6 +30,11 @@ namespace LifeOrganizer.Data.UnitOfWorkPattern
             }
 
             return (IRepository<TEntity>)_repositories[type]!;
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
 
         public async Task<int> SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default)
