@@ -43,6 +43,8 @@ namespace LifeOrganizer.Api.Controllers
         {
             var userId = User.GetUserId();
             dto.UserId = userId;
+            dto.CreatedBy = userId.ToString();
+            dto.CreatedOn = DateTime.UtcNow;
             await _genericService.AddAsync(dto, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
@@ -57,6 +59,11 @@ namespace LifeOrganizer.Api.Controllers
             if (existing == null)
                 return NotFound();
 
+            dto.UserId = userId;
+            dto.CreatedBy = existing.CreatedBy;
+            dto.CreatedOn = existing.CreatedOn;
+            dto.UpdatedBy = User.GetUserId().ToString();
+            dto.UpdatedOn = DateTime.UtcNow;
             await _genericService.UpdateAsync(dto, cancellationToken);
             return NoContent();
         }

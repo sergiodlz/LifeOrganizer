@@ -99,5 +99,52 @@ namespace LifeOrganizer.Business.Services
             await AddAsync(fromTransaction, cancellationToken);
             await AddAsync(toTransaction, cancellationToken);
         }
+
+        public override async Task UpdateAsync(TransactionDto dto, CancellationToken cancellationToken = default)
+        {
+            var transactionRepo = _unitOfWork.Repository<Transaction>();
+            var tagRepo = _unitOfWork.Repository<Tag>();
+
+            // Get the transaction with tags included
+            var existingTransaction = await transactionRepo.GetByIdWithIncludesAsync(
+                dto.Id, 
+                dto.UserId,
+                t => t.Tags);
+
+            if (existingTransaction == null)
+            {
+                throw new ArgumentException($"Transaction with ID {dto.Id} not found");
+            }
+
+            // Update basic properties
+            _mapper.Map(dto, existingTransaction);
+
+            // Handle tags
+            // Start with a clean slate
+            existingTransaction.Tags = new List<Tag>();
+
+            if (dto.Tags != null && dto.Tags.Any())
+            {
+                foreach (var tagDto in dto.Tags)
+                {
+                    if (tagDto.Id != Guid.Empty)
+                    {
+                        var existingTag = await tagRepo.GetByIdAsync(tagDto.Id, existingTransaction.UserId);
+                        if (existingTag != null)
+                        {
+                            existingTransaction.Tags.Add(existingTag);
+                        }
+                    }
+                    else
+                    {
+                        var newTag = _mapper.Map<Tag>(tagDto);
+                        existingTransaction.Tags.Add(newTag);
+                    }
+                }
+            }
+
+            transactionRepo.Update(existingTransaction);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
     }
 }
