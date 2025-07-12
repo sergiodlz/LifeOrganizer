@@ -8,7 +8,9 @@ using FluentValidation.AspNetCore;
 using FluentValidation;
 using LifeOrganizer.Business.Validators;
 using LifeOrganizer.Api.Middleware;
-
+using LifeOrganizer.Api.Extensions;
+using LifeOrganizer.Api.BackgroundServices;
+using LifeOrganizer.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 // FluentValidation registration
@@ -88,6 +90,10 @@ builder.Services.AddAutoMapper(typeof(TagProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(TransactionProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(PocketProfile).Assembly);
 
+// Register services and background workers
+builder.Services.AddScoped<IAccountBalanceService, AccountBalanceService>();
+builder.Services.AddBackgroundWorkers();
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -97,6 +103,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<LifeOrganizerContext>();
     db.Database.Migrate();
+
+    // Run initial balance update
+    var balanceService = scope.ServiceProvider.GetRequiredService<IAccountBalanceService>();
+    await balanceService.UpdateAllBalancesAsync();
 }
 
 if (!app.Environment.IsDevelopment())
