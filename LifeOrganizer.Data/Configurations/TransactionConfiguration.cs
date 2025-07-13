@@ -9,7 +9,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.HasOne(t => t.Account)
-            .WithMany()
+            .WithMany(a => a.Transactions)
             .HasForeignKey(t => t.AccountId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(t => t.Category)

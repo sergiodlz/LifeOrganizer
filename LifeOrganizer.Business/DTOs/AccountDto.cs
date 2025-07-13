@@ -9,5 +9,6 @@ public class AccountDto : BaseEntityDto
     public bool IncludeInGlobalBalance { get; set; }
     public CurrencyType Currency { get; set; }
     public decimal Balance { get; set; }
-    public ICollection<PocketDto> Pockets { get; set; } = new List<PocketDto>();
+    public ICollection<PocketDto> Pockets { get; set; } = [];
+    public ICollection<TransactionDto> Transactions { get; set; } = [];
 }

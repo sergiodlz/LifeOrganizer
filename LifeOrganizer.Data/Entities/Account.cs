@@ -8,4 +8,5 @@ public class Account : BaseEntity
     public CurrencyType Currency { get; set; } = CurrencyType.USD;
     public decimal Balance { get; set; }
     public ICollection<Pocket> Pockets { get; set; } = [];
+    public ICollection<Transaction> Transactions { get; set; } = [];
 }
