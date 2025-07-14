@@ -17,6 +17,7 @@ public class LifeOrganizerContext : DbContext
         modelBuilder.ApplyConfiguration(new Configurations.TransactionConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.UserConfiguration());
         modelBuilder.ApplyConfiguration(new Configurations.PocketConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.PocketTransactionConfiguration());
 
         // Global query filter for soft delete
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
