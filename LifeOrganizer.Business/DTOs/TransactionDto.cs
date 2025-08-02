@@ -15,4 +15,5 @@ public class TransactionDto : BaseEntityDto
     public CategoryDto? Category { get; set; }
     public SubcategoryDto? Subcategory { get; set; }
     public ICollection<TagDto> Tags { get; set; } = new List<TagDto>();
+    public decimal? ExchangeAmount { get; set; }
 }

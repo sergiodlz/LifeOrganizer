@@ -66,5 +66,4 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
         // 4️⃣ Commit changes through Unit of Work
         await _unitOfWork.SaveChangesAsync();
     }
-
 }

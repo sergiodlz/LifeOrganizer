@@ -12,4 +12,5 @@ public class Transaction : BaseTransaction
     public string? ReferenceNumber { get; set; }
     public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public CurrencyType Currency { get; set; } = CurrencyType.USD;
+    public decimal? ExchangeAmount { get; set; }
 }
