@@ -10,11 +10,13 @@ namespace LifeOrganizer.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IBudgetService _budgetService;
 
-        public TransactionService(IUnitOfWork unitOfWork, IMapper mapper)
+        public TransactionService(IUnitOfWork unitOfWork, IMapper mapper, IBudgetService budgetService)
             : base(unitOfWork, mapper)
         {
             _unitOfWork = unitOfWork;
+            _budgetService = budgetService;
             _mapper = mapper;
         }
 
@@ -57,6 +59,7 @@ namespace LifeOrganizer.Business.Services
 
                 await transactionRepo.AddAsync(entity);
                 await _unitOfWork.SaveChangesAsync();
+                await _budgetService.EvaluateTransactionAsync(dto);
                 await dbTransaction.CommitAsync();
             }
             catch

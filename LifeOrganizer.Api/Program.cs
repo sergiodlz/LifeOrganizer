@@ -38,6 +38,7 @@ builder.Services.AddScoped(typeof(IGenericService<,>), typeof(GenericService<,>)
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPocketTransactionService, PocketTransactionService>();
+builder.Services.AddScoped<IBudgetService, BudgetService>();
 
 // Add controllers
 builder.Services.AddControllers();
@@ -91,6 +92,9 @@ builder.Services.AddAutoMapper(typeof(TagProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(TransactionProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(PocketProfile).Assembly);
 builder.Services.AddAutoMapper(typeof(PocketTransactionProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(BudgetProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(BudgetRuleProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(BudgetPeriodProfile).Assembly);
 
 // Register services and background workers
 builder.Services.AddScoped<IAccountBalanceService, AccountBalanceService>();
