@@ -4,11 +4,12 @@ namespace LifeOrganizer.Business.DTOs;
 
 public class BudgetPeriodDto : BaseEntityDto
 {
-    public Guid BudgetId { get; set; } // Links to the main budget
-    public BudgetDto Budget { get; set; } = null!; 
+    public Guid BudgetId { get; set; }
 
-    public int Year { get; set; } // e.g. 2025
-    public int Month { get; set; } // e.g. 1 for January
+    public int Year { get; set; }
+    public int Month { get; set; }
 
-    public decimal ActualAmount { get; set; } // Sum of all matched transactions
+    public decimal ActualAmount { get; set; }
+
+    public ICollection<BudgetPeriodTransactionDto> BudgetPeriodTransactions { get; set; } = new List<BudgetPeriodTransactionDto>();
 }

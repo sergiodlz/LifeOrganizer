@@ -59,6 +59,8 @@ namespace LifeOrganizer.Business.Services
 
                 await transactionRepo.AddAsync(entity);
                 await _unitOfWork.SaveChangesAsync();
+
+                dto.Id = entity.Id;
                 await _budgetService.EvaluateTransactionAsync(dto);
                 await dbTransaction.CommitAsync();
             }
@@ -136,6 +138,7 @@ namespace LifeOrganizer.Business.Services
                     dto.Id,
                     dto.UserId,
                     t => t.Tags) ?? throw new ArgumentException($"Transaction with ID {dto.Id} not found");
+                var oldTransactionDto = _mapper.Map<TransactionDto>(existingTransaction);
 
                 var oldAccount = await accountRepo.GetByIdAsync(existingTransaction.AccountId, dto.UserId)
                     ?? throw new InvalidOperationException($"Account with ID {existingTransaction.AccountId} not found.");
@@ -170,6 +173,8 @@ namespace LifeOrganizer.Business.Services
                 accountRepo.Update(account);
                 transactionRepo.Update(existingTransaction);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _budgetService.ReEvaluateTransactionAsync(oldTransactionDto, dto);
+
                 await dbTransaction.CommitAsync();
             }
             catch

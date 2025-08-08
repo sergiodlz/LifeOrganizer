@@ -3,6 +3,7 @@ using LifeOrganizer.Business.DTOs;
 using LifeOrganizer.Data.Entities;
 using LifeOrganizer.Data.Repositories;
 using LifeOrganizer.Data.UnitOfWorkPattern;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeOrganizer.Business.Services;
 
@@ -12,6 +13,7 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
     private readonly IMapper _mapper;
     private readonly IRepository<Budget> _budgetRepository;
     private readonly IRepository<BudgetPeriod> _budgetPeriodRepository;
+    private readonly IRepository<BudgetPeriodTransaction> _budgetPeriodTransactionRepository;
 
     public BudgetService(IUnitOfWork unitOfWork, IMapper mapper)
             : base(unitOfWork, mapper)
@@ -20,6 +22,7 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
         _mapper = mapper;
         _budgetRepository = _unitOfWork.Repository<Budget>();
         _budgetPeriodRepository = _unitOfWork.Repository<BudgetPeriod>();
+        _budgetPeriodTransactionRepository = _unitOfWork.Repository<BudgetPeriodTransaction>();
     }
 
     public async Task EvaluateTransactionAsync(TransactionDto transaction)
@@ -27,9 +30,8 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
         int year = transaction.OccurredOn.Year;
         int month = transaction.OccurredOn.Month;
 
-        // 1️⃣ Load all budgets with rules and periods for this user
         var budgets = await _budgetRepository
-            .GetAllWithIncludesAsync(transaction.UserId, b => b.Rules, b => b.Periods);
+            .GetAllWithIncludesAsync(transaction.UserId, b => b.Rules);
 
         foreach (var budget in budgets)
         {
@@ -41,29 +43,61 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
 
             if (!matchesRule) continue;
 
-            // 2️⃣ Find or create the BudgetPeriod for current month
-            var period = budget.Periods
-                .FirstOrDefault(p => p.Month == month && p.Year == year);
+            var period = await _unitOfWork.Repository<BudgetPeriod>().Query()
+                    .FirstOrDefaultAsync(p => p.BudgetId == budget.Id && p.Year == year && p.Month == month);
 
             if (period == null)
             {
                 period = new BudgetPeriod
                 {
-                    Id = Guid.NewGuid(),
                     BudgetId = budget.Id,
                     Year = year,
                     Month = month,
-                    ActualAmount = 0
+                    ActualAmount = 0,
+                    UserId = transaction.UserId
                 };
-
                 await _budgetPeriodRepository.AddAsync(period);
+                await _unitOfWork.SaveChangesAsync();
             }
 
-            // 3️⃣ Update ActualAmount
-            period.ActualAmount -= transaction.Type == TransactionType.Income ? transaction.Amount : -transaction.Amount;
+            var existingLink = await _budgetPeriodTransactionRepository.Query()
+                    .AnyAsync(bpt => bpt.BudgetPeriodId == period.Id && bpt.TransactionId == transaction.Id);
+
+            if (existingLink) continue;
+
+            var newLink = new BudgetPeriodTransaction
+            {
+                BudgetPeriodId = period.Id,
+                TransactionId = transaction.Id,
+                Amount = transaction.Type == TransactionType.Income ? -transaction.Amount : transaction.Amount,
+                UserId = transaction.UserId
+            };
+
+            await _budgetPeriodTransactionRepository.AddAsync(newLink);
+            period.ActualAmount += newLink.Amount;
         }
 
-        // 4️⃣ Commit changes through Unit of Work
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task ReEvaluateTransactionAsync(TransactionDto oldTransaction, TransactionDto newTransaction)
+    {
+        await RemoveTransactionEvaluationAsync(oldTransaction);
+        await EvaluateTransactionAsync(newTransaction);
+    }
+
+    public async Task RemoveTransactionEvaluationAsync(TransactionDto transaction)
+    {
+        var links = await _budgetPeriodTransactionRepository.Query()
+            .Where(bpt => bpt.TransactionId == transaction.Id)
+            .Include(bpt => bpt.BudgetPeriod)
+            .ToListAsync();
+
+        foreach (var link in links)
+        {
+            link.BudgetPeriod.ActualAmount -= link.Amount;
+            _budgetPeriodTransactionRepository.Remove(link);
+        }
         await _unitOfWork.SaveChangesAsync();
     }
 }

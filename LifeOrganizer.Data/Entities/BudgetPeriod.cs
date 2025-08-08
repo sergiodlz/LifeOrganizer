@@ -4,11 +4,13 @@ namespace LifeOrganizer.Data.Entities;
 
 public class BudgetPeriod : BaseEntity
 {
-    public Guid BudgetId { get; set; } // Links to the main budget
-    public Budget Budget { get; set; } = null!; 
+    public Guid BudgetId { get; set; }
+    public Budget Budget { get; set; } = null!;
 
-    public int Year { get; set; } // e.g. 2025
-    public int Month { get; set; } // e.g. 1 for January
+    public int Year { get; set; }
+    public int Month { get; set; }
 
-    public decimal ActualAmount { get; set; } // Sum of all matched transactions
+    public decimal ActualAmount { get; set; }
+    
+    public ICollection<BudgetPeriodTransaction> BudgetPeriodTransactions { get; set; } = new List<BudgetPeriodTransaction>();
 }

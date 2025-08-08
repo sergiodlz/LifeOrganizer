@@ -13,4 +13,5 @@ public class Transaction : BaseTransaction
     public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public CurrencyType Currency { get; set; } = CurrencyType.USD;
     public decimal? ExchangeAmount { get; set; }
+    public ICollection<BudgetPeriodTransaction> BudgetPeriodTransactions { get; set; } = new List<BudgetPeriodTransaction>();
 }

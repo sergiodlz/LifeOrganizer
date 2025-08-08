@@ -3,6 +3,7 @@ using System;
 using LifeOrganizer.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LifeOrganizer.Data.Migrations
 {
     [DbContext(typeof(LifeOrganizerContext))]
-    partial class LifeOrganizerContextModelSnapshot : ModelSnapshot
+    [Migration("20250808143320_AddBudgetperiodTransaction")]
+    partial class AddBudgetperiodTransaction
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
