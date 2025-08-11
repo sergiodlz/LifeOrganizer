@@ -47,56 +47,50 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
         }
     }
 
-    public async Task EvaluateTransactionAsync(TransactionDto transaction)
+    public async Task EvaluateTransactionAsync(TransactionDto transactionDto)
     {
-        int year = transaction.OccurredOn.Year;
-        int month = transaction.OccurredOn.Month;
-
+        var transaction = _mapper.Map<Transaction>(transactionDto);
         var budgets = await _budgetRepository
             .GetAllWithIncludesAsync(transaction.UserId, b => b.Rules);
 
-        foreach (var budget in budgets)
+        var matchingBudgets = budgets
+            .Where(budget =>
+                DoesTransactionMatchRules(transaction, _mapper.Map<ICollection<BudgetRuleDto>>(budget.Rules)))
+            .ToList();
+
+        if (!matchingBudgets.Any()) return;
+
+        var budgetIds = matchingBudgets.Select(b => b.Id).ToList();
+        var periodsByBudgetId = await GetOrCreatePeriodsForTransactionAsync(budgetIds, transactionDto);
+        var existingLinkedPeriodIds = await _budgetPeriodTransactionRepository.Query()
+            .Where(bpt => bpt.TransactionId == transaction.Id)
+            .Select(bpt => bpt.BudgetPeriodId)
+            .ToHashSetAsync();
+
+        var newLinksToAdd = new List<BudgetPeriodTransaction>();
+        foreach (var budget in matchingBudgets)
         {
-            bool matchesRule = budget.Rules.Any(rule =>
-                (rule.CategoryId == null || rule.CategoryId == transaction.CategoryId) &&
-                (rule.SubcategoryId == null || rule.SubcategoryId == transaction.SubcategoryId) &&
-                (rule.TagId == null || transaction.Tags.Any(t => t.Id == rule.TagId))
-            );
+            var period = periodsByBudgetId[budget.Id];
+            if (existingLinkedPeriodIds.Contains(period.Id)) continue;
 
-            if (!matchesRule) continue;
+            var amount = CalculateBudgetAmount(transaction, budget.Currency);
+            if (amount == 0) continue;
 
-            var period = await _unitOfWork.Repository<BudgetPeriod>().Query()
-                    .FirstOrDefaultAsync(p => p.BudgetId == budget.Id && p.Year == year && p.Month == month);
-
-            if (period == null)
-            {
-                period = new BudgetPeriod
-                {
-                    BudgetId = budget.Id,
-                    Year = year,
-                    Month = month,
-                    ActualAmount = 0,
-                    UserId = transaction.UserId
-                };
-                await _budgetPeriodRepository.AddAsync(period);
-                await _unitOfWork.SaveChangesAsync();
-            }
-
-            var existingLink = await _budgetPeriodTransactionRepository.Query()
-                    .AnyAsync(bpt => bpt.BudgetPeriodId == period.Id && bpt.TransactionId == transaction.Id);
-
-            if (existingLink) continue;
-
-            var newLink = new BudgetPeriodTransaction
+            newLinksToAdd.Add(new BudgetPeriodTransaction
             {
                 BudgetPeriodId = period.Id,
                 TransactionId = transaction.Id,
-                Amount = transaction.Type == TransactionType.Income ? -transaction.Amount : transaction.Amount,
+                Amount = amount,
                 UserId = transaction.UserId
-            };
+            });
 
-            await _budgetPeriodTransactionRepository.AddAsync(newLink);
-            period.ActualAmount += newLink.Amount;
+            period.ActualAmount += amount;
+            _budgetPeriodRepository.Update(period);
+        }
+
+        if (newLinksToAdd.Any())
+        {
+            await _budgetPeriodTransactionRepository.AddRangeAsync(newLinksToAdd);
         }
 
         await _unitOfWork.SaveChangesAsync();
@@ -126,76 +120,147 @@ public class BudgetService : GenericService<Budget, BudgetDto>, IBudgetService
     private async Task EvaluateNewBudgetAgainstExistingTransactionsAsync(BudgetDto newBudget, CancellationToken cancellationToken)
     {
         var userTransactions = await _transactionRepository.GetAllWithIncludesAsync(newBudget.UserId, t => t.Tags);
+        if (!userTransactions.Any()) return;
 
-        if (!userTransactions.Any())
+        var matchingTransactionsByPeriod = userTransactions
+            .Where(t => DoesTransactionMatchRules(t, newBudget.Rules))
+            .GroupBy(t => (t.OccurredOn.Year, t.OccurredOn.Month))
+            .ToDictionary(g => g.Key, g => g.ToList());
+        if (matchingTransactionsByPeriod.Count == 0) return;
+
+        var budgetPeriods = await GetOrCreateBudgetPeriodsAsync(newBudget, matchingTransactionsByPeriod.Keys, cancellationToken);
+
+        var allNewLinks = new List<BudgetPeriodTransaction>();
+        foreach (var periodGroup in matchingTransactionsByPeriod)
         {
-            return;
+            var period = budgetPeriods[periodGroup.Key];
+            var transactionsInPeriod = periodGroup.Value;
+
+            var newLinks = transactionsInPeriod
+                .Select(transaction => new { transaction, amount = CalculateBudgetAmount(transaction, newBudget.Currency) })
+                .Where(t => t.amount != 0)
+                .Select(t => new BudgetPeriodTransaction
+                {
+                    BudgetPeriodId = period.Id,
+                    TransactionId = t.transaction.Id,
+                    Amount = t.amount,
+                    UserId = newBudget.UserId
+                }).ToList();
+
+            if (newLinks.Count > 0)
+            {
+                allNewLinks.AddRange(newLinks);
+                period.ActualAmount += newLinks.Sum(link => link.Amount);
+                _budgetPeriodRepository.Update(period);
+            }
         }
 
-        var transactionsByPeriod = userTransactions.GroupBy(t => new { t.OccurredOn.Year, t.OccurredOn.Month });
-        var budgetRules = newBudget.Rules;
-
-        foreach (var periodGroup in transactionsByPeriod)
+        if (allNewLinks.Count != 0)
         {
-            var year = periodGroup.Key.Year;
-            var month = periodGroup.Key.Month;
+            await _budgetPeriodTransactionRepository.AddRangeAsync(allNewLinks);
+        }
 
-            var matchingTransactionsInPeriod = new List<Transaction>();
-            foreach (var transaction in periodGroup)
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    private decimal CalculateBudgetAmount(Transaction transaction, CurrencyType budgetCurrency)
+    {
+        decimal amount;
+        if (budgetCurrency == transaction.Currency)
+        {
+            amount = transaction.Amount;
+        }
+        else if (transaction.ExchangeAmount.HasValue && transaction.ExchangeAmount.Value > 0)
+        {
+            amount = transaction.ExchangeAmount.Value;
+        }
+        else
+        {
+            return 0;
+        }
+
+        return transaction.Type == TransactionType.Income ? -amount : amount;
+    }
+
+    private bool DoesTransactionMatchRules(Transaction transaction, ICollection<BudgetRuleDto> rules)
+    {
+        return rules.Any(rule =>
+            (rule.CategoryId == null || rule.CategoryId == transaction.CategoryId) &&
+            (rule.SubcategoryId == null || rule.SubcategoryId == transaction.SubcategoryId) &&
+            (rule.TagId == null || (transaction.Tags != null && transaction.Tags.Any(t => t.Id == rule.TagId)))
+        );
+    }
+
+    private async Task<Dictionary<(int Year, int Month), BudgetPeriod>> GetOrCreateBudgetPeriodsAsync(
+    BudgetDto budget,
+    IEnumerable<(int Year, int Month)> requiredPeriods,
+    CancellationToken cancellationToken)
+    {
+        var existingPeriods = (await _budgetPeriodRepository.Query()
+            .Where(p => p.BudgetId == budget.Id)
+            .ToListAsync(cancellationToken))
+            .ToDictionary(p => (p.Year, p.Month));
+
+        var newPeriodsToCreate = new List<BudgetPeriod>();
+        foreach (var periodKey in requiredPeriods)
+        {
+            if (!existingPeriods.ContainsKey(periodKey))
             {
-                bool matchesRule = budgetRules.Any(rule =>
-                    (rule.CategoryId == null || rule.CategoryId == transaction.CategoryId) &&
-                    (rule.SubcategoryId == null || rule.SubcategoryId == transaction.SubcategoryId) &&
-                    (rule.TagId == null || transaction.Tags.Any(t => t.Id == rule.TagId))
-                );
-
-                if (matchesRule)
+                var newPeriod = new BudgetPeriod
                 {
-                    matchingTransactionsInPeriod.Add(transaction);
-                }
+                    BudgetId = budget.Id,
+                    Year = periodKey.Year,
+                    Month = periodKey.Month,
+                    ActualAmount = 0,
+                    UserId = budget.UserId
+                };
+                newPeriodsToCreate.Add(newPeriod);
+                existingPeriods.Add(periodKey, newPeriod);
             }
+        }
 
-            if (!matchingTransactionsInPeriod.Any())
+        if (newPeriodsToCreate.Count != 0)
+        {
+            await _budgetPeriodRepository.AddRangeAsync(newPeriodsToCreate);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return existingPeriods;
+    }
+    
+    private async Task<Dictionary<Guid, BudgetPeriod>> GetOrCreatePeriodsForTransactionAsync(List<Guid> budgetIds, TransactionDto transaction)
+    {
+        int year = transaction.OccurredOn.Year;
+        int month = transaction.OccurredOn.Month;
+
+        var existingPeriods = await _budgetPeriodRepository.Query()
+            .Where(p => budgetIds.Contains(p.BudgetId) && p.Year == year && p.Month == month)
+            .ToDictionaryAsync(p => p.BudgetId);
+
+        var newPeriodsToCreate = new List<BudgetPeriod>();
+        foreach (var budgetId in budgetIds)
+        {
+            if (!existingPeriods.ContainsKey(budgetId))
             {
-                continue;
-            }
-
-            var period = await _budgetPeriodRepository.Query()
-                .FirstOrDefaultAsync(p => p.BudgetId == newBudget.Id && p.Year == year && p.Month == month, cancellationToken);
-
-            if (period == null)
-            {
-                period = new BudgetPeriod
+                var newPeriod = new BudgetPeriod
                 {
-                    BudgetId = newBudget.Id,
+                    BudgetId = budgetId,
                     Year = year,
                     Month = month,
                     ActualAmount = 0,
-                    UserId = newBudget.UserId
+                    UserId = transaction.UserId
                 };
-                await _budgetPeriodRepository.AddAsync(period);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                newPeriodsToCreate.Add(newPeriod);
+                existingPeriods.Add(budgetId, newPeriod);
             }
-            
-            decimal periodAmountDelta = 0;
-            foreach (var transaction in matchingTransactionsInPeriod)
-            {
-                var amount = transaction.Type == TransactionType.Income ? -transaction.Amount : transaction.Amount;
-                var newLink = new BudgetPeriodTransaction
-                {
-                    BudgetPeriodId = period.Id,
-                    TransactionId = transaction.Id,
-                    Amount = amount,
-                    UserId = newBudget.UserId
-                };
-                await _budgetPeriodTransactionRepository.AddAsync(newLink);
-                periodAmountDelta += amount;
-            }
-
-            period.ActualAmount += periodAmountDelta;
-            _budgetPeriodRepository.Update(period);
         }
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (newPeriodsToCreate.Any())
+        {
+            await _budgetPeriodRepository.AddRangeAsync(newPeriodsToCreate);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        return existingPeriods;
     }
 }

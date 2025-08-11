@@ -19,6 +19,6 @@ public class BudgetPeriodTransactionConfiguration: IEntityTypeConfiguration<Budg
             .WithMany(t => t.BudgetPeriodTransactions)
             .HasForeignKey(bpt => bpt.TransactionId);
 
-        builder.HasIndex(bpt => new { bpt.BudgetPeriodId, bpt.TransactionId }).IsUnique();
+        builder.HasIndex(bpt => new { bpt.BudgetPeriodId, bpt.TransactionId, bpt.IsDeleted }).IsUnique();
     }
 }
